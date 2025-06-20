@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Railway Command Shell</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white font-mono">
+  <div class="container mx-auto p-4">
+    <h1 class="text-3xl font-bold text-center mb-4 text-green-400">Railway Command Shell</h1>
+    <p class="text-center mb-4">Run commands as if you're driving a train through the terminal tracks!</p>
+    <div class="bg-gray-800 p-4 rounded-lg shadow-lg">
+      <div id="output" class="h-96 overflow-y-auto mb-4 p-4 bg-black text-green-400 rounded"></div>
+      <input
+        id="commandInput"
+        type="text"
+        placeholder="Enter command (e.g., ls, pwd, echo 'All aboard!')"
+        class="w-full p-2 bg-gray-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-green-400"
+      >
+      <button
+        id="executeBtn"
+        class="mt-2 w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
+      >
+        Run Command
+      </button>
+    </div>
+  </div>
+  <script>
+    const ws = new WebSocket('ws://localhost:3000');
+    const output = document.getElementById('output');
+    const commandInput = document.getElementById('commandInput');
+    const executeBtn = document.getElementById('executeBtn');
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      const outputLine = document.createElement('div');
+      outputLine.textContent = data.output;
+      output.appendChild(outputLine);
+      output.scrollTop = output.scrollHeight;
+    };
+
+    ws.onerror = (error) => {
+      const errorLine = document.createElement('div');
+      errorLine.textContent = 'Error: Connection to server failed.';
+      errorLine.className = 'text-red-400';
+      output.appendChild(errorLine);
+    };
+
+    executeBtn.addEventListener('click', () => {
+      const command = commandInput.value.trim();
+      if (command) {
+        ws.send(JSON.stringify({ command }));
+        commandInput.value = '';
+      }
+    });
+
+    commandInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        executeBtn.click();
+      }
+    });
+  </script>
+</body>
+</html>
