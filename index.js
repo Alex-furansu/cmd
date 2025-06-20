@@ -7,14 +7,16 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-app.use(express.static('.')); // Serve index.html from the current directory
+// Serve static files (index.html and index.js)
+app.use(express.static('.'));
 
+// WebSocket connection handler
 wss.on('connection', (ws) => {
   ws.on('message', (message) => {
     const data = JSON.parse(message);
     const command = data.command;
 
-    // Spawn a shell process (use 'cmd' on Windows, 'bash' on Unix-like systems)
+    // Spawn a shell process (bash for Unix-like systems, cmd for Windows)
     const shell = process.platform === 'win32' ? spawn('cmd', ['/c', command]) : spawn('bash', ['-c', command]);
 
     // Capture stdout
@@ -34,6 +36,8 @@ wss.on('connection', (ws) => {
   });
 });
 
-server.listen(3000, () => {
-  console.log('Server running on http://localhost:3000');
+// Use Railway's provided PORT environment variable
+const port = process.env.PORT || 3000;
+server.listen(port, '0.0.0.0', () => {
+  console.log(`Server running on port ${port}`);
 });

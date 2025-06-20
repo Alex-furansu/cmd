@@ -1,17 +1,13 @@
 {
-  "name": "cmd",
+  "name": "railway-shell-app",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "WebSocket-based command shell on Railway",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
-    "express": "^5.1.0",
-    "ws": "^8.18.2"
+    "express": "^4.19.2",
+    "ws": "^8.18.0"
   }
 }
