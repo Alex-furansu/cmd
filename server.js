@@ -33,14 +33,29 @@ const SSH_PASSWORD = process.env.SSH_PASSWORD || 'railway123';
 const PORT = process.env.PORT || 3000;
 const SSH_PORT = process.env.SSH_PORT || 2222;
 
+// Auto-detect Railway domain
+let RAILWAY_DOMAIN = 'localhost';
+const RAILWAY_PUBLIC_DOMAIN = process.env.RAILWAY_PUBLIC_DOMAIN;
+const RAILWAY_STATIC_URL = process.env.RAILWAY_STATIC_URL;
+
+if (RAILWAY_PUBLIC_DOMAIN) {
+    RAILWAY_DOMAIN = RAILWAY_PUBLIC_DOMAIN;
+} else if (RAILWAY_STATIC_URL) {
+    RAILWAY_DOMAIN = RAILWAY_STATIC_URL.replace('https://', '').replace('http://', '');
+}
+
 console.log(`SSH Server Configuration:`);
 console.log(`Username: ${SSH_USERNAME}`);
 console.log(`Password: ${SSH_PASSWORD}`);
 console.log(`HTTP Port: ${PORT}`);
 console.log(`SSH Port: ${SSH_PORT}`);
+console.log(`Detected Domain: ${RAILWAY_DOMAIN}`);
 
 // Create HTTP server for Railway health checks
 const httpServer = http.createServer((req, res) => {
+    // Get the actual domain from the request
+    const currentDomain = req.headers.host || RAILWAY_DOMAIN;
+    
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(`
         <!DOCTYPE html>
@@ -49,11 +64,14 @@ const httpServer = http.createServer((req, res) => {
             <title>Railway SSH Server</title>
             <style>
                 body { font-family: Arial, sans-serif; margin: 40px; background: #1a1a1a; color: #fff; }
-                .container { max-width: 600px; margin: 0 auto; }
+                .container { max-width: 700px; margin: 0 auto; }
                 .header { text-align: center; margin-bottom: 40px; }
                 .info { background: #2a2a2a; padding: 20px; border-radius: 8px; margin: 20px 0; }
-                .command { background: #333; padding: 15px; border-radius: 5px; font-family: monospace; margin: 10px 0; }
+                .command { background: #333; padding: 15px; border-radius: 5px; font-family: monospace; margin: 10px 0; overflow-x: auto; }
                 .status { color: #4CAF50; font-weight: bold; }
+                .copy-btn { background: #4CAF50; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-left: 10px; }
+                .copy-btn:hover { background: #45a049; }
+                .domain-info { background: #1e3a5f; padding: 15px; border-radius: 5px; margin: 10px 0; }
             </style>
         </head>
         <body>
@@ -63,28 +81,78 @@ const httpServer = http.createServer((req, res) => {
                     <p class="status">✅ Server is running!</p>
                 </div>
                 
-                <div class="info">
-                    <h3>Connection Information:</h3>
+                <div class="domain-info">
+                    <h3>🌐 Auto-Detected Connection Info:</h3>
+                    <p><strong>Current Domain:</strong> ${currentDomain}</p>
                     <p><strong>SSH Port:</strong> ${SSH_PORT}</p>
                     <p><strong>Username:</strong> ${SSH_USERNAME}</p>
-                    <p><strong>Domain:</strong> ${req.headers.host}</p>
                 </div>
                 
                 <div class="info">
-                    <h3>Connect from Termux:</h3>
-                    <div class="command">
-                        pkg install openssh<br>
-                        ssh -p ${SSH_PORT} ${SSH_USERNAME}@${req.headers.host}
+                    <h3>📱 Connect from Android Termux:</h3>
+                    <div class="command" id="termux-cmd">
+pkg update && pkg install openssh<br>
+ssh -p ${SSH_PORT} ${SSH_USERNAME}@${currentDomain}
                     </div>
+                    <button class="copy-btn" onclick="copyToClipboard('termux-cmd')">Copy Commands</button>
                 </div>
                 
                 <div class="info">
-                    <h3>Server Status:</h3>
+                    <h3>💻 Connect from PC/Mac:</h3>
+                    <div class="command" id="pc-cmd">
+ssh -p ${SSH_PORT} ${SSH_USERNAME}@${currentDomain}
+                    </div>
+                    <button class="copy-btn" onclick="copyToClipboard('pc-cmd')">Copy Command</button>
+                </div>
+                
+                <div class="info">
+                    <h3>🔧 Alternative Connection (if standard fails):</h3>
+                    <div class="command" id="alt-cmd">
+ssh -o "StrictHostKeyChecking=no" -p ${SSH_PORT} ${SSH_USERNAME}@${currentDomain}
+                    </div>
+                    <button class="copy-btn" onclick="copyToClipboard('alt-cmd')">Copy Command</button>
+                </div>
+                
+                <div class="info">
+                    <h3>📊 Server Status:</h3>
                     <p>SSH Server: <span class="status">Running</span></p>
+                    <p>HTTP Server: <span class="status">Running</span></p>
                     <p>Uptime: ${Math.floor(process.uptime() / 60)} minutes</p>
                     <p>Memory Usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)} MB</p>
+                    <p>Environment: ${process.env.NODE_ENV || 'production'}</p>
+                </div>
+                
+                <div class="info">
+                    <h3>🛠️ Available Environment Variables:</h3>
+                    <p><strong>SSH_USERNAME:</strong> Change your SSH username</p>
+                    <p><strong>SSH_PASSWORD:</strong> Change your SSH password</p>
+                    <p><strong>SSH_PORT:</strong> Change SSH port (default: 2222)</p>
                 </div>
             </div>
+            
+            <script>
+                function copyToClipboard(elementId) {
+                    const element = document.getElementById(elementId);
+                    const text = element.innerText || element.textContent;
+                    navigator.clipboard.writeText(text).then(() => {
+                        alert('Commands copied to clipboard!');
+                    }).catch(() => {
+                        // Fallback for older browsers
+                        const textArea = document.createElement('textarea');
+                        textArea.value = text;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                        alert('Commands copied to clipboard!');
+                    });
+                }
+                
+                // Auto-refresh every 30 seconds to update uptime
+                setTimeout(() => {
+                    location.reload();
+                }, 30000);
+            </script>
         </body>
         </html>
     `);
@@ -222,7 +290,9 @@ server.on('error', (err) => {
 
 server.listen(SSH_PORT, '0.0.0.0', () => {
     console.log(`🚂 SSH Server listening on port ${SSH_PORT}`);
-    console.log(`Connect with: ssh -p ${SSH_PORT} ${SSH_USERNAME}@your-railway-domain.railway.app`);
+    console.log(`🌐 Auto-detected domain: ${RAILWAY_DOMAIN}`);
+    console.log(`📱 Termux connection: ssh -p ${SSH_PORT} ${SSH_USERNAME}@${RAILWAY_DOMAIN}`);
+    console.log(`💻 Direct connection: ssh -p ${SSH_PORT} ${SSH_USERNAME}@${RAILWAY_DOMAIN}`);
 });
 
 // Keep the process alive
