@@ -19,8 +19,8 @@ COPY . .
 # Create a non-root user for SSH sessions
 RUN adduser -D -s /bin/bash sshuser
 
-# Expose the SSH port
-EXPOSE 2222
+# Expose both HTTP and SSH ports
+EXPOSE 3000 2222
 
 # Start the SSH server
 CMD ["npm", "start"]

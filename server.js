@@ -1,5 +1,6 @@
 // server.js
 const ssh2 = require('ssh2');
+const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
@@ -29,12 +30,69 @@ if (fs.existsSync(HOST_KEY_PATH)) {
 // SSH Server configuration
 const SSH_USERNAME = process.env.SSH_USERNAME || 'user';
 const SSH_PASSWORD = process.env.SSH_PASSWORD || 'railway123';
-const PORT = process.env.PORT || 2222;
+const PORT = process.env.PORT || 3000;
+const SSH_PORT = process.env.SSH_PORT || 2222;
 
 console.log(`SSH Server Configuration:`);
 console.log(`Username: ${SSH_USERNAME}`);
 console.log(`Password: ${SSH_PASSWORD}`);
-console.log(`Port: ${PORT}`);
+console.log(`HTTP Port: ${PORT}`);
+console.log(`SSH Port: ${SSH_PORT}`);
+
+// Create HTTP server for Railway health checks
+const httpServer = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Railway SSH Server</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; background: #1a1a1a; color: #fff; }
+                .container { max-width: 600px; margin: 0 auto; }
+                .header { text-align: center; margin-bottom: 40px; }
+                .info { background: #2a2a2a; padding: 20px; border-radius: 8px; margin: 20px 0; }
+                .command { background: #333; padding: 15px; border-radius: 5px; font-family: monospace; margin: 10px 0; }
+                .status { color: #4CAF50; font-weight: bold; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🚂 Railway SSH Server</h1>
+                    <p class="status">✅ Server is running!</p>
+                </div>
+                
+                <div class="info">
+                    <h3>Connection Information:</h3>
+                    <p><strong>SSH Port:</strong> ${SSH_PORT}</p>
+                    <p><strong>Username:</strong> ${SSH_USERNAME}</p>
+                    <p><strong>Domain:</strong> ${req.headers.host}</p>
+                </div>
+                
+                <div class="info">
+                    <h3>Connect from Termux:</h3>
+                    <div class="command">
+                        pkg install openssh<br>
+                        ssh -p ${SSH_PORT} ${SSH_USERNAME}@${req.headers.host}
+                    </div>
+                </div>
+                
+                <div class="info">
+                    <h3>Server Status:</h3>
+                    <p>SSH Server: <span class="status">Running</span></p>
+                    <p>Uptime: ${Math.floor(process.uptime() / 60)} minutes</p>
+                    <p>Memory Usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)} MB</p>
+                </div>
+            </div>
+        </body>
+        </html>
+    `);
+});
+
+httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`🌐 HTTP Server listening on port ${PORT}`);
+});
 
 const server = new Server({
     hostKeys: [hostKey]
@@ -162,9 +220,9 @@ server.on('error', (err) => {
     console.error('Server error:', err);
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚂 Railway SSH Server listening on port ${PORT}`);
-    console.log(`Connect with: ssh -p ${PORT} ${SSH_USERNAME}@your-railway-domain.railway.app`);
+server.listen(SSH_PORT, '0.0.0.0', () => {
+    console.log(`🚂 SSH Server listening on port ${SSH_PORT}`);
+    console.log(`Connect with: ssh -p ${SSH_PORT} ${SSH_USERNAME}@your-railway-domain.railway.app`);
 });
 
 // Keep the process alive
