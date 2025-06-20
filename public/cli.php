@@ -40,7 +40,7 @@ if (!isset($_SESSION['admin'])) {
   </form>
 
   <script>
-    const CLI_API = "https://your-node-backend-url/"; // <-- Replace with Railway or local URL
+    const CLI_API = "https://cmd-production-949f.up.railway.app/"; // <-- Replace with Railway or local URL
     const ADMIN_TOKEN = "my-secret-token"; // Must match server.js
 
     const form = document.getElementById('cli-form');
