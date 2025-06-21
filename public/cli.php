@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['admin'])) {
-    header("Location: index.php");
+    header("Location: ./index.php");
     exit();
 }
 ?>
@@ -40,7 +40,7 @@ if (!isset($_SESSION['admin'])) {
   </form>
 
   <script>
-    const CLI_API = "https://cmd-production-949f.up.railway.app/"; // <-- Replace with Railway or local URL
+    const CLI_API = "cmd-production-5a7a.up.railway.app"; // <-- Replace with Railway or local URL
     const ADMIN_TOKEN = "my-secret-token"; // Must match server.js
 
     const form = document.getElementById('cli-form');
